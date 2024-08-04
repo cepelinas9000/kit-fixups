@@ -259,10 +259,21 @@ setuptools_pythons:
 
   packages:
     - setuptools_scm:
-        rdepend: |
-          !dev-python/setuptools_scm_git_archive
-        bdepend: |
-          !!<dev-python/setuptools_scm-8.0.0
+        #rdepend: |
+        #  !dev-python/setuptools_scm_git_archive # it is unesserary for setuptools_scm-8
+        body : |
+          src_configure() {
+            local ifiles=("${EROOT}/var/db/pkg/dev-python/setuptools_scm-7."*)
+            if [ -d "${ifiles[0]}" ]; then # only happens when setuptools_scm-7 is installed
+              # due to bad interaction between pep517, setuptools, installed 7.x setuptools_scm and ${S}/_own_version_helper.py dynamic version generator dynamic importlib import get confused and tries load from wrong place
+              # it could be done better, but only side effect is two aditional internal unused api files added (results from files are not necesary - we are not needed git tags for version field)
+              ewarn "adding /src/setuptools_scm/{file_finder_git.py,file_hinder_hg.py} which point to _file_finders.{git,hg} modules due to build tools interaction"
+              echo "from ._file_finders.git import *" > ${S}/src/setuptools_scm/file_finder_git.py
+              echo "from ._file_finders.hg import *" >  ${S}/src/setuptools_scm/file_finder_hg.py
+            fi
+            distutils-r1_src_configure
+          }
+
 
         du_pep517: standalone
         iuse: test
